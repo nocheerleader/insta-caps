@@ -14,6 +14,7 @@ export interface UiState {
   step: AppStep;
   selectedTone: ToneId | null;
   imageFile: File | null; // The original uploaded image file
+  imagePreviewUrl: string | null; // For client-side preview
   imageBase64: string | null; // Base64 representation of the compressed image
   captions: string[];
   errorMessage: string | null; // For displaying user-friendly error messages
@@ -28,35 +29,55 @@ export interface UiState {
   resetToUpload: () => void; // Action to reset state for a new image
 }
 
-export const useUiStore = create<UiState>((set) => ({
+export const useUiStore = create<UiState>((set, get) => ({
   step: "upload", // Initial step
   selectedTone: null,
   imageFile: null,
+  imagePreviewUrl: null,
   imageBase64: null,
   captions: [],
   errorMessage: null,
 
   setStep: (step) => set({ step }),
   setSelectedTone: (tone) => set({ selectedTone: tone }),
-  setImageFile: (file) =>
-    set({
-      imageFile: file,
-      imageBase64: null,
-      captions: [],
-      errorMessage: null,
-    }), // Reset related fields
+  setImageFile: (file) => {
+    const currentPreviewUrl = get().imagePreviewUrl;
+    if (currentPreviewUrl) {
+      URL.revokeObjectURL(currentPreviewUrl);
+    }
+    if (file) {
+      set({
+        imageFile: file,
+        imagePreviewUrl: URL.createObjectURL(file),
+        imageBase64: null,
+        captions: [],
+        errorMessage: null,
+      });
+    } else {
+      set({
+        imageFile: null,
+        imagePreviewUrl: null,
+      });
+    }
+  },
   setImageBase64: (base64) => set({ imageBase64: base64 }),
-  setCaptions: (captions) => set({ captions, step: "results" }), // Move to results step when captions are set
+  setCaptions: (captions) => set({ captions, step: "results" }),
   setErrorMessage: (message) =>
-    set({ errorMessage: message, step: "error", captions: [] }), // Also set step to error and clear captions
+    set({ errorMessage: message, step: "error", captions: [] }),
 
-  resetToUpload: () =>
+  resetToUpload: () => {
+    const currentPreviewUrl = get().imagePreviewUrl;
+    if (currentPreviewUrl) {
+      URL.revokeObjectURL(currentPreviewUrl);
+    }
     set({
       step: "upload",
       selectedTone: null,
       imageFile: null,
+      imagePreviewUrl: null,
       imageBase64: null,
       captions: [],
       errorMessage: null,
-    }),
+    });
+  },
 }));
